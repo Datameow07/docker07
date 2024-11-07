@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpd
+      tier: proxy
+  template:
+    metadata:
+      labels:
+        app: httpd
+        tier: proxy
+    spec:
+      containers:
+        - name: httpd
+          image: httpd
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: httpd-config
+              mountPath: /usr/local/apache2/conf/httpd.conf
+              subPath: httpd.conf
+      volumes:
+        - name: httpd-config
+          configMap:
+            name: httpd-config
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: httpd-config
+data:
+  httpd.conf: |
+    LoadModule proxy_module modules/mod_proxy.so
+    LoadModule proxy_http_module modules/mod_proxy_http.so
+
+    <VirtualHost *:80>
+        ProxyPass / http://myapp:3000/
+        ProxyPassReverse / http://myapp:3000/
+    </VirtualHost>
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpd
+spec:
+  selector:
+    app: httpd
+    tier: proxy
+  ports:
+    - port: 80
+      targetPort: 80
+  type: NodePort
