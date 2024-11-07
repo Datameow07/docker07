@@ -1,0 +1,53 @@
+version: "3.7"
+services:
+  # Node.js application service
+  app:
+    container_name: myapp-node
+    image: node:18
+    working_dir: /usr/src/app
+    volumes:
+      - ./app:/usr/src/app
+    environment:
+      MONGO_URL: mongodb://mongo:27017/mydatabase
+    command: "node server.js"
+    depends_on:
+      - mongo
+    ports:
+      - "3000:3000"
+
+  # MongoDB database service
+  mongo:
+    container_name: myapp-mongo
+    image: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  # Jenkins CI/CD service
+  jenkins:
+    container_name: myapp-jenkins
+    image: jenkins/jenkins:lts
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_data:/var/jenkins_home
+    depends_on:
+      - app
+
+  # HTTPD server as a reverse proxy to the Node app
+  httpd:
+    container_name: myapp-httpd
+    image: httpd:latest
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+    volumes:
+      - ./httpd.conf:/usr/local/apache2/conf/httpd.conf
+
+volumes:
+  mongo_data:
+  jenkins_data:
